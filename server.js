@@ -1,3 +1,4 @@
+
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -7,6 +8,28 @@ const os = require('os');
 
 const app = express();
 const PORT = 3000;
+
+// Check if required files and folders exist
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const INDEX_FILE = path.join(PUBLIC_DIR, 'index.html');
+const UPLOAD_DIR = path.join(__dirname, 'uploads');
+
+if (!fs.existsSync(PUBLIC_DIR)) {
+    console.error('ERROR: public folder does not exist!');
+    console.error('Please run setup.bat first.');
+    process.exit(1);
+}
+
+if (!fs.existsSync(INDEX_FILE)) {
+    console.error('ERROR: index.html not found in public folder!');
+    console.error('Please run setup.bat first.');
+    process.exit(1);
+}
+
+// Create uploads directory if it doesn't exist
+if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
 
 function getLocalIP() {
     const interfaces = os.networkInterfaces();
@@ -21,11 +44,6 @@ function getLocalIP() {
 }
 
 const LOCAL_IP = getLocalIP();
-
-const UPLOAD_DIR = path.join(__dirname, 'uploads');
-if (!fs.existsSync(UPLOAD_DIR)) {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -64,11 +82,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from current directory
-app.use(express.static(__dirname));
+// Serve static files from public directory
+app.use(express.static(PUBLIC_DIR));
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(INDEX_FILE);
 });
 
 app.get('/api/files', (req, res) => {
