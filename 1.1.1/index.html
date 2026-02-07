@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Manager</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+        }
+        
+        .theme-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #3390ec;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 4px 12px rgba(51, 144, 236, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .theme-btn:hover {
+            transform: rotate(30deg) scale(1.1);
+            box-shadow: 0 6px 16px rgba(51, 144, 236, 0.4);
+        }
+        
+        .light-theme {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #e9ecef;
+            --border-color: #dee2e6;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --text-tertiary: #adb5bd;
+            --accent-color: #3390ec;
+            --accent-hover: #2b7fd8;
+            --success-color: #20ad96;
+            --error-color: #ec5151;
+            --warning-color: #f5a623;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .dark-theme {
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1c1c1c;
+            --bg-tertiary: #2a2a2a;
+            --border-color: #2a2a2a;
+            --text-primary: #e1e3e6;
+            --text-secondary: #8a8d91;
+            --text-tertiary: #555;
+            --accent-color: #3390ec;
+            --accent-hover: #4a9cee;
+            --success-color: #20ad96;
+            --error-color: #ec5151;
+            --warning-color: #f5a623;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+    </style>
+</head>
+<body class="dark-theme">
+    <div class="theme-toggle">
+        <button class="theme-btn" id="themeToggle">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+    
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1><i class="fas fa-cloud-upload-alt"></i> File Manager</h1>
+                <div class="server-info">
+                    <span id="serverUrl">Connecting...</span>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button id="backBtn" class="btn" title="Back">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <button id="homeBtn" class="btn" title="Home">
+                    <i class="fas fa-home"></i>
+                </button>
+                <button id="refreshBtn" class="btn" title="Refresh">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                
+                <div class="upload-area">
+                    <label class="btn btn-primary">
+                        <i class="fas fa-upload"></i> Upload
+                        <input type="file" id="fileInput" multiple style="display: none;">
+                    </label>
+                </div>
+            </div>
+        </header>
+
+        <div class="path-bar">
+            <div class="breadcrumb" id="breadcrumb">
+                <span class="crumb" data-path="">Root</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="table-header">
+                <div class="col-name">Name</div>
+                <div class="col-size">Size</div>
+                <div class="col-modified">Modified</div>
+                <div class="col-actions">Actions</div>
+            </div>
+            
+            <div class="file-list-container">
+                <div id="fileList" class="file-list">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-left">
+                <span id="itemCount">0 items</span>
+            </div>
+            <div class="status-right">
+                <span id="totalSize">0 B</span>
+            </div>
+        </div>
+
+        <!-- Modals -->
+        <div id="renameModal" class="modal">
+            <div class="modal-content">
+                <h2><i class="fas fa-edit"></i> Rename</h2>
+                <input type="text" id="renameInput" placeholder="Enter new name" autocomplete="off">
+                <div class="modal-actions">
+                    <button id="cancelRenameBtn" class="btn">Cancel</button>
+                    <button id="confirmRenameBtn" class="btn btn-primary">Rename</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="progressModal" class="modal">
+            <div class="modal-content">
+                <h2><i class="fas fa-cloud-upload-alt"></i> Uploading Files</h2>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">0%</div>
+                    <div id="uploadSpeed" class="upload-speed" style="display: none;">
+                        Speed: <span id="speedValue">0 B/s</span>
+                    </div>
+                </div>
+                <div class="file-info" id="currentFile">Preparing...</div>
+                <button id="cancelUploadBtn" class="btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+            
+            // Check for saved theme or default to dark
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            body.className = savedTheme + '-theme';
+            updateThemeIcon(savedTheme);
+            
+            themeToggle.addEventListener('click', function() {
+                const currentTheme = body.classList.contains('dark-theme') ? 'dark' : 'light';
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                body.className = newTheme + '-theme';
+                updateThemeIcon(newTheme);
+                localStorage.setItem('theme', newTheme);
+            });
+            
+            function updateThemeIcon(theme) {
+                const icon = themeToggle.querySelector('i');
+                if (theme === 'dark') {
+                    icon.className = 'fas fa-moon';
+                    themeToggle.title = 'Switch to Light Theme';
+                } else {
+                    icon.className = 'fas fa-sun';
+                    themeToggle.title = 'Switch to Dark Theme';
+                }
+            }
+        });
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>
